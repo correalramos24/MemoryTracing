@@ -1,6 +1,6 @@
 #!/bin/bash
 SAMPLING_TIME=2
-MEM_FILE="mem.log"
+MEM_FILE="$HOSTNAME-mem.log"
 
 echo "Enable mem tracing with sampling every $SAMPLING_TIME"
 
