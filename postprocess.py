@@ -1,92 +1,74 @@
+#!/bin/python3
+
 import argparse
-import glob
 import matplotlib.pyplot as plt
+import numpy as np
+from definitions import *
 
+def parseFile(fName="mem.log", sampTime=2) -> MemoryTrace:
+    ret = MemoryTrace(fName.split(".")[0])
+    print(f"Parsing {fName} with sampling each {sampTime} seconds...", end='')
 
-def parseFile(fName="mem.log"):
-    host=fName.split(".")[0]
-    #triplets of (total, used, free)
-    mem = [] 
-    swap = []
-    print(f"Parsing {fName} from host {host}...", end='')
+    extractDataFromFreeLine = lambda l : l.strip().split()[1:4]
+
     with open(fName, mode='r') as memFile:
         for l in memFile.readlines():
-            #Is a 
-            if "total" in l:
-                continue
-            if "Mem:" in l:
-                total, used, free =l.strip().split()[1:4]
-                #print(f"Found mem record with {total}, {used}, {free} (MiB)")
-                mem.append((total, used, free))
+            if "total" in l: continue
+            if "Mem:" in l: 
+                aux = MemoryRecord._make(extractDataFromFreeLine(l))
+                ret.addMainMemRecord(aux)    
             if "Swap: " in l:
-                total, used, free =l.strip().split()[1:4]
-                #print(f"Found swap record with {total}, {used}, {free} (MiB)")
-                swap.append((total, used, free))
-    print(f"Found {len(mem)} memory records")
-    return host, mem, swap
+                aux = MemoryRecord._make(extractDataFromFreeLine(l))
+                ret.addSwapMemRecord(aux)
+    print(f" DONE! Found {ret.getRecords()}")
+    return ret
 
-def plot(memRecords=[], samplingTime=2):
-    total =list(map(lambda x: float(x[0]), memRecords)) 
-    used = list(map(lambda x: float(x[1]), memRecords))
-    timing=list([2*x for x in list(range(len(memRecords)))])
-
-    plt.plot(timing, used, 'r', label="Memory usage")
-    plt.plot(timing, total, 'b--', label="Available memory" )
-    plt.ylabel("Memory (MiB)")
-    plt.xlabel("Time (s)")
-    plt.legend()
-
-    plt.show()
-
-def plotMultiNode(NodeMemRecords={}, samplingTime=2): 
-    #Id inside each dict record:
-    memId=0 
-    swpId=1    
-
+def plotMemory(NodeMemRecords, saveName=None):
+    if len(NodeMemRecords) == 0: 
+        print("Empty data, can't generate any plot :(")
+        return
     for k in NodeMemRecords:
-        total = list(map(lambda x : float(x[0]), NodeMemRecords[k][memId]))
-        used  = list(map(lambda x : float(x[1]), NodeMemRecords[k][memId]))
-        timing= list([2*x for x in list(range(len(total)))])
-        plt.plot(timing, used, label=k)
-        plt.plot(timing, total, label="total"+k)
+        print(f"Plotting {k} data...", end='')
+
+        total=list(NodeMemRecords[k].getTotal())
+        used=list(NodeMemRecords[k].getUsed())
+        timing=np.arange(0, NodeMemRecords[k].getTotalTime(), NodeMemRecords[k].sampling)
+
+        plt.plot(timing, used, label="Used " + k)
+        plt.plot(timing, total, label="Total "+k)
+        print("Done!")
 
     plt.ylabel("Memory (MiB)")
     plt.xlabel("Time (s)")
+    plt.title("Memory tracing")
     plt.legend()
-    plt.show()
+    if saveName is not None:
+        print(f"Saving plot to {saveName}")
+        plt.savefig(saveName+".png")
+    else: 
+        plt.show()
 
 def main():
-    # Arg parser
+    # Arg parsing:
     parser = argparse.ArgumentParser(description="Memory tracing postprocessing")
-    #Add flag-type args:
-    parser.add_argument('-f',   required=False, help="Input file")
-    parser.add_argument('-mf',  required=False, help="Input files", nargs="*")
+    parser.add_argument('-f',  required=True, help="Input files", nargs="+")
+    parser.add_argument('-s', required=True, help='Sampling time')
+    parser.add_argument('--save', required=False, default=None, help="Enable and define save file name")
     args= parser.parse_args()
-        
-    if args.f is not None and args.mf is not None:
-        print("Specify only one input. Exit")
-        exit(2)
 
-    if args.f is not None:
-        mem, swap = parseFile()
-        plot(mem, swap)
-        exit(0)
+    # Parse & plot:
+    resultsPerHost=dict()
+    for file in args.f:
+        try:
+            info = parseFile(file, 2)
+            if info.host in resultsPerHost:
+                print("WARNING! Same node name in the log files detected!")
+                print("This file will not be plotted!")
+            else: resultsPerHost[info.host] = info
+        except:
+            print(f"Can't parse {file} file, next one")
 
-    if args.mf is not None:
-        results=dict()  #each node points to pair [mem], [swap]
-        for file in args.mf:
-            print(file)
-            node, mem, swap = parseFile(file)
-            if node in results:
-                print("ERROR! Same node name in the log files detected!")
-                exit(1) 
-            results[node] = (mem,swap)
-        plotMultiNode(results)
-        exit(0)
-
-    print("Specify one input. Exit")
-    exit(2)
-
+    plotMemory(resultsPerHost, args.save)
 
 if __name__ == "__main__":
     main()
