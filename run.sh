@@ -8,7 +8,7 @@ free -s $SAMPLING_TIME &> $MEM_FILE &
 PID_FREE=$!
 
 #Run your program:
-sleep 10
+#sleep 10
 
 #Stop memory tracing
 echo "Stop memory tracing. Results @ $MEM_FILE (units in KiB)"
