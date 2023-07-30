@@ -11,7 +11,7 @@ pip install -r requirements.txt
 
 
 ## Usage example
-![ExampleImg](myPlot.png)
+![ExampleImg](examples/myPlot.png)
 1. Before running your app, launch the free command on the background. Use `-s` option for enable the sampling and redirect the output into a file.
 2. Store the PID to kill it after you app finishes
 3. Launch your application
