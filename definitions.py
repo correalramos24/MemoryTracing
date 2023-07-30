@@ -20,17 +20,17 @@ class MemoryTrace:
 
     def getUsed(self, main_mem_or_swap_mem='mem'):
         if main_mem_or_swap_mem == 'mem':
-            return map(float, self.main_meminfo)
+            return map(lambda mem_record: float(mem_record.used), self.main_meminfo)
         elif main_mem_or_swap_mem == 'swap':
-            return map(float, self.swap_meminfo)
+            return map(lambda mem_record: float(mem_record.used), self.swap_meminfo)
         else:
             raise Exception("Invalid argument getUsed!")
 
     def getTotal(self, main_mem_or_swap_mem='mem'):
         if main_mem_or_swap_mem == 'mem':
-            return map(float, self.main_meminfo)
+            return map(lambda mem_record: float(mem_record.total), self.main_meminfo)
         elif main_mem_or_swap_mem == 'swap':
-            return map(float, self.swap_meminfo)
+            return map(lambda mem_record: float(mem_record.total), self.swap_meminfo)
         else:
             raise Exception("Invalid argument getUsed!")
 

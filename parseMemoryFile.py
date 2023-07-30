@@ -68,7 +68,7 @@ def main():
                 print("This file will not be plotted!")
             else:
                 results_per_host[info.host] = info
-        except Exception():
+        except:
             print(f"Can't parse {file} file, next one")
 
     plotMemory(results_per_host, args.save)
