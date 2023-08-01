@@ -16,4 +16,4 @@ kill $PID_FREE
 
 echo "All done"
 
-./parseMemoryFile.py -f $MEM_FILE -s $SAMPLING_TIME
+./app/main.py -f $MEM_FILE -s $SAMPLING_TIME
