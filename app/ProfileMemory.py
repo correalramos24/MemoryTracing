@@ -16,7 +16,10 @@ class ProfileMemory:
         else:
             self.data_per_host = memData
 
-    def plotDataPLT(self, plot_swap: bool = False, save_name: str = None) -> None:
+    def plotDataPLT(self, plot_swap: bool = False, 
+                    save_name: str = None,
+                    plot_total: bool = True) -> None:
+        
         if len(self.data_per_host) == 0:
             print("Empty data, can't generate any plot :(")
 
@@ -30,7 +33,9 @@ class ProfileMemory:
             timing = np.arange(0, self.getSamplingTime() * len(main_mem_used), self.getSamplingTime())
 
             plt.plot(timing, main_mem_used, label="Used " + host)
-            plt.plot(timing, main_mem_total, label="Total " + host)
+            
+            if plot_total:
+                plt.plot(timing, main_mem_total, label="Total " + host)
 
             if plot_swap:
                 raise Exception("Not implemented yet!")
