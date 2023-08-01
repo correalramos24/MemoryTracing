@@ -1,4 +1,4 @@
 __pycache__/definitions.cpython-310.pyc
 .idea/*
 *.log
-__pycache__/*
+app/__pycache__/*
