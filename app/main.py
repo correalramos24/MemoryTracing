@@ -10,7 +10,7 @@ def main():
     parser.add_argument('-s', required=True, help='Sampling time')
     parser.add_argument('-u', required=False, default="KiB", help="Memory units")
     parser.add_argument('--save', required=False, default=None, help="Enable and define save file name")
-    parser.add_argument('--total', required=False, default=True, help="Enable and define save file name")
+    parser.add_argument('--total', required=False, action='store_true', help="Enable total memory available?")
     args = parser.parse_args()
 
     # Parse & plot:
