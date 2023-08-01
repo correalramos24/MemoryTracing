@@ -3,8 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-
-
 class ProfileMemory:
 
     MemRecord = namedtuple("MemRecord", "total used free")
