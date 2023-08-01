@@ -10,13 +10,16 @@ def main():
     parser.add_argument('-s', required=True, help='Sampling time')
     parser.add_argument('-u', required=False, default="KiB", help="Memory units")
     parser.add_argument('--save', required=False, default=None, help="Enable and define save file name")
+    parser.add_argument('--swap', required=False, action='store_true', help="Enable swap plotting")
     parser.add_argument('--total', required=False, action='store_true', help="Enable total memory available?")
     args = parser.parse_args()
 
     # Parse & plot:
 
     pf_mem = ProfileMemory.from_files(args.f, args.s, args.u)
-    pf_mem.plotDataPLT(args.save, args.total)
+    pf_mem.plotDataPLT( save_name=args.save, 
+                        plot_total=args.total, 
+                        plot_swap=args.swap)
 
 
 if __name__ == "__main__":

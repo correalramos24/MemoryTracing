@@ -1,12 +1,12 @@
 from collections import namedtuple
 import numpy as np
-import matplotlib.pyplot as plt
 
+MemRecord = namedtuple("MemRecord", "total used free")
+MemTrace = namedtuple("MemTrace", "host main_mem_info swap_meminfo", defaults=([], []))
 
 class ProfileMemory:
 
-    MemRecord = namedtuple("MemRecord", "total used free")
-    MemTrace = namedtuple("MemTrace", "host main_mem_info swap_meminfo", defaults=([], []))
+
 
     def __init__(self, memData: dict[MemTrace] = None, sampling_time: int = None, units: str = None) -> None:
         self.sampling_time = int(sampling_time)
@@ -16,9 +16,33 @@ class ProfileMemory:
         else:
             self.data_per_host = memData
 
+    def plotDataBOKEH(self, plot_swap: bool = False, save_name: str = None, plot_total: bool  = True):
+        from bokeh.plotting import figure, show
+        import numpy as np
+
+        p = figure( sizing_mode="stretch_width",
+                    title="Memory tracing", 
+                    x_axis_label="time [s]", 
+                    y_axis_label=f"Memory [{self.units}]")
+
+        for k in self.data_per_host.values():
+            host = k.host
+            main_mem_total = list(map(lambda x: float(x.used), k.main_mem_info))
+            main_mem_used = list(map(lambda x: float(x.total), k.main_mem_info))
+            timing = np.arange(0, self.getSamplingTime() * len(main_mem_used), self.getSamplingTime())
+
+            p.line(timing, main_mem_total, line_width=2, legend_label=host+" used main memory")
+            if plot_total:
+                p.line(timing, main_mem_used, line_width=4, legend_label=host+" Total main memory")
+
+            show(p)
+
+
     def plotDataPLT(self, plot_swap: bool = False, 
                     save_name: str = None,
                     plot_total: bool = True) -> None:
+        import matplotlib.pyplot as plt
+        import numpy as np
         
         if len(self.data_per_host) == 0:
             print("Empty data, can't generate any plot :(")
@@ -29,18 +53,19 @@ class ProfileMemory:
 
             main_mem_total = list(map(lambda x: float(x.used), k.main_mem_info))
             main_mem_used = list(map(lambda x: float(x.total), k.main_mem_info))
-
             timing = np.arange(0, self.getSamplingTime() * len(main_mem_used), self.getSamplingTime())
 
-            plt.plot(timing, main_mem_used, label="Used " + host)
-            
-            if plot_total:
-                plt.plot(timing, main_mem_total, label="Total " + host)
+            plt.plot(timing, main_mem_used, label="Used main mem @" + host)
 
             if plot_swap:
-                raise Exception("Not implemented yet!")
+                swap_mem_total = list(map(lambda x: float(x.total), k.swap_meminfo))
+                swap_mem_used = list(map(lambda x: float(x.used), k.swap_meminfo))
+                plt.plot(timing, swap_mem_used, label="Used swap @" + host)
+                if plot_total:
+                    plt.plot(timing, swap_mem_total, label="Total swap @" + host)
 
-            print("Done!")
+            if plot_total:
+                plt.plot(timing, main_mem_total, label="Total Main mem @ " + host)
 
         plt.ylabel(f"Memory {self.units}")
         plt.xlabel("Time (s)")
