@@ -2,71 +2,42 @@ from collections import namedtuple
 import numpy as np
 import matplotlib.pyplot as plt
 
-MemoryRecord = namedtuple("MemRecord", "total used free")
+MemRecord = namedtuple("MemRecord", "total used free")
+MemTrace = namedtuple("MemTrace", "host main_mem_info swap_meminfo", defaults=([], []))
 
-class MemoryTrace:
-
-    def __init__(self, host, sampling_time=2, units="MiB") -> None:
-        self.host = host
-        self.sampling = sampling_time
-        self.units = units
-        self.main_meminfo = []
-        self.swap_meminfo = []
-
-    def addMainMemRecord(self, info):
-        self.main_meminfo.append(info)
-
-    def addSwapMemRecord(self, info):
-        self.swap_meminfo.append(info)
-
-    def getUsed(self, main_mem_or_swap_mem='mem'):
-        if main_mem_or_swap_mem == 'mem':
-            return map(lambda mem_record: float(mem_record.used), self.main_meminfo)
-        elif main_mem_or_swap_mem == 'swap':
-            return map(lambda mem_record: float(mem_record.used), self.swap_meminfo)
-        else:
-            raise Exception("Invalid argument getUsed!")
-
-    def getTotal(self, main_mem_or_swap_mem='mem'):
-        if main_mem_or_swap_mem == 'mem':
-            return map(lambda mem_record: float(mem_record.total), self.main_meminfo)
-        elif main_mem_or_swap_mem == 'swap':
-            return map(lambda mem_record: float(mem_record.total), self.swap_meminfo)
-        else:
-            raise Exception("Invalid argument getUsed!")
-
-    def getRecords(self):
-        return len(self.main_meminfo)
-
-    def getTotalTime(self):
-        return self.getRecords() * self.sampling
-
-    def getSampling(self):
-        return self.sampling
 
 class ProfileMemory:
 
-    def __init__(self, memData=None) -> None:
+    def __init__(self, memData: dict[MemTrace] = None, sampling_time: int = None, units: str = None) -> None:
+        self.sampling_time = int(sampling_time)
+        self.units = units
         if memData is None:
             self.data_per_host = {}
         else:
             self.data_per_host = memData
 
-    def plotDataPLT(self, save_name) -> None:
+    def plotDataPLT(self, plot_swap: bool = False, save_name: str = None) -> None:
         if len(self.data_per_host) == 0:
             print("Empty data, can't generate any plot :(")
+
         for k in self.data_per_host.values():
             host = k.host
             print(f"Plotting {host} data...", end='')
-            total = list(k.getTotal())
-            used = list(k.getUsed())
-            timing = np.arange(0, k.getTotalTime(), k.getSampling())
 
-            plt.plot(timing, used, label="Used " + host)
-            plt.plot(timing, total, label="Total " + host)
+            main_mem_total = list(map(lambda x: float(x.used), k.main_mem_info))
+            main_mem_used = list(map(lambda x: float(x.total), k.main_mem_info))
+
+            timing = np.arange(0, self.getSamplingTime() * len(main_mem_used), self.getSamplingTime())
+
+            plt.plot(timing, main_mem_used, label="Used " + host)
+            plt.plot(timing, main_mem_total, label="Total " + host)
+
+            if plot_swap:
+                raise Exception("Not implemented yet!")
+
             print("Done!")
 
-        plt.ylabel("Memory (MiB)")
+        plt.ylabel(f"Memory {self.units}")
         plt.xlabel("Time (s)")
         plt.title("Memory tracing")
         plt.legend()
@@ -77,40 +48,47 @@ class ProfileMemory:
         else:
             plt.show()
 
-    @staticmethod
-    def __parsefile__(file_name, sampling_time) -> MemoryTrace:
-        ret = MemoryTrace(file_name.split(".")[0])
+    def getSamplingTime(self):
+        return self.sampling_time
 
-        print(f"Parsing {file_name} with sampling each {sampling_time} seconds...", end='')
+    @staticmethod
+    def __parsefile__(file_name) -> MemTrace:
+        hostName = file_name.split("-mem.log")[0]
+        ret = MemTrace(hostName, [], [])
+        print(f"Parsing {file_name} ({hostName})", end='')
 
         with open(file_name, mode='r') as memFile:
             for line in memFile.readlines():
                 if "total" in line:
                     continue
                 if "Mem:" in line:
-                    aux = MemoryRecord._make(line.strip().split()[1:4])
-                    ret.addMainMemRecord(aux)
+                    aux = MemRecord._make(line.strip().split()[1:4])
+                    ret.main_mem_info.append(aux)
                 if "Swap: " in line:
-                    aux = MemoryRecord._make(line.strip().split()[1:4])
-                    ret.addSwapMemRecord(aux)
-        print(f" DONE! Found {ret.getRecords()}")
+                    aux = MemRecord._make(line.strip().split()[1:4])
+                    ret.swap_meminfo.append(aux)
+
+        if len(ret.main_mem_info) != len(ret.swap_meminfo):
+            raise Exception("File corrupted, different swap and mem information")
+        else:
+            print(f" DONE! Found {len(ret.main_mem_info)} records")
 
         return ret
 
     @classmethod
-    def from_files(cls, file_names, sampling_time): 
-        aux_info=dict()
+    def from_files(cls, file_names, sampling_time, units="KiB"):
+        aux_info = dict()
         for file in file_names:
             try:
-                info = cls.__parsefile__(file, sampling_time)
+                info = cls.__parsefile__(file)
                 if info.host in aux_info:
-                    print("WARNING! Same node name in the log files detected!")
+                    print(f"WARNING! Same node name in the log files detected! ({info.host})")
                     print("This file will not be plotted!")
                 else:
                     aux_info[info.host] = info
-            except:
+            except Exception:
                 print(f"Can't parse {file} file, skipping")
-        return ProfileMemory(aux_info)
+        return ProfileMemory(aux_info, sampling_time, units)
     
 
     @classmethod
