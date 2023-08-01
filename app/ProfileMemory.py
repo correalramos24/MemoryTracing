@@ -2,11 +2,13 @@ from collections import namedtuple
 import numpy as np
 import matplotlib.pyplot as plt
 
-MemRecord = namedtuple("MemRecord", "total used free")
-MemTrace = namedtuple("MemTrace", "host main_mem_info swap_meminfo", defaults=([], []))
+
 
 
 class ProfileMemory:
+
+    MemRecord = namedtuple("MemRecord", "total used free")
+    MemTrace = namedtuple("MemTrace", "host main_mem_info swap_meminfo", defaults=([], []))
 
     def __init__(self, memData: dict[MemTrace] = None, sampling_time: int = None, units: str = None) -> None:
         self.sampling_time = int(sampling_time)
@@ -89,7 +91,6 @@ class ProfileMemory:
             except Exception:
                 print(f"Can't parse {file} file, skipping")
         return ProfileMemory(aux_info, sampling_time, units)
-    
 
     @classmethod
     def from_tracing_file(cls, file_name, sampling_time):
